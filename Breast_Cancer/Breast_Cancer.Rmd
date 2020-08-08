@@ -6,9 +6,6 @@ output:
     df_print: paged
   pdf_document:
     toc: yes
-  html_notebook:
-    toc: yes
-    theme: spacelab
 editor_options:
   chunk_output_type: inline
 ---
