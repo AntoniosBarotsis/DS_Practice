@@ -1,11 +1,11 @@
 ---
 title: "Using K-NN to predict breast cancer"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     df_print: paged
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: inline
 ---
@@ -35,11 +35,11 @@ library(caTools)
 library(class)
 ```
 
-We import and inspect the data
+We import and inspect the data. 
 ```{r echo=FALSE}
 dataset = read.csv('../data/breast_cancer.csv')
 
-str(dataset)
+str(dataset[1:12])
 ```
 As we can see the first feature is a simple identifier which we can drop since 
 it does not provide useful information to us. The next variable, ``diagnosis``,
