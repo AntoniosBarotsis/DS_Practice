@@ -1,11 +1,11 @@
 ---
 title: "Using K-NN to predict breast cancer"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     toc: yes
     df_print: paged
-  pdf_document:
-    toc: yes
 editor_options:
   chunk_output_type: inline
 ---
@@ -58,6 +58,7 @@ dataset$diagnosis = factor(dataset$diagnosis,
 prop.table(table(dataset$diagnosis))
 plot(dataset$diagnosis)
 ```
+
 # Creating training and test datasets and training a model on them
 
 Before splitting the data we will scale it since K-NN is heavily affected by
