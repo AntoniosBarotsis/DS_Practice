@@ -1,12 +1,14 @@
 ---
 title: "Using K-NN to predict breast cancer"
 output:
-  html_notebook:
-    toc: yes
-    theme: spacelab
   html_document:
     toc: yes
     df_print: paged
+  pdf_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+    theme: spacelab
 editor_options:
   chunk_output_type: inline
 ---
