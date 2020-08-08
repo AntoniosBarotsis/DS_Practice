@@ -1,0 +1,181 @@
+---
+title: "Using K-NN to predict breast cancer"
+output:
+  html_notebook:
+    toc: yes
+    theme: spacelab
+  html_document:
+    toc: yes
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+# Introduction
+
+We are going to use the "Breast Cancer Wisconsing Diagnostic" dataset from the
+*[UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/index.php)*.
+The data set donated by researchers includes measurements from digitized images
+of fine-needle aspirate of a breast mass. The features describe characteristics 
+of the cell nuclei present in the images.\
+
+The dataset includes 569 samples with 32 features each. One of the features is 
+an identification number and another is the cancer diagnosis, the rest are
+numeric values. The diagnosis is encoded as 'M' and 'B' representing "Malignant"
+and "Benign" respectively.\
+
+The measurements include the mean, standard error and worst value for the 
+following measurements: Radius, Texture, Perimeter, Area, Smoothness, 
+Compactness, Concavity, Concave points, Symmetry and Fractal dimension.
+
+# Exploring and preparing the data
+
+We will start by importing the necessary libraries
+```{r message=FALSE, warning=FALSE}
+library(caTools)
+library(class)
+```
+
+We import and inspect the data
+```{r echo=FALSE}
+dataset = read.csv('../data/breast_cancer.csv')
+
+str(dataset)
+```
+As we can see the first feature is a simple identifier which we can drop since 
+it does not provide useful information to us. The next variable, ``diagnosis``,
+is what we hope to predict. We first encode is into numerical values 1 and 2 
+and then we get an idea of the diagnostic distribution.
+```{r echo=FALSE}
+# Dropping the id feature
+dataset = dataset[-1]
+
+# Encoding features as factors
+dataset$diagnosis = factor(dataset$diagnosis, 
+                           levels = c('B', 'M'), 
+                           labels = c('Benign', 'Malignant'))
+
+# Diagnostic statistics
+prop.table(table(dataset$diagnosis))
+plot(dataset$diagnosis)
+```
+# Creating training and test datasets and training a model on them
+
+Before splitting the data we will scale it since K-NN is heavily affected by
+the measurement scale of the input features (we are omitting the diagnosis
+since that cannot be scaled) 
+```{r}
+dataset[-1] = scale(dataset[-1])
+```
+
+We can now split the data
+```{r}
+set.seed(123)
+split = sample.split(dataset$diagnosis, SplitRatio = 0.75)
+training_set = subset(dataset, split == TRUE)
+test_set = subset(dataset, split == FALSE)
+```
+
+We are going to start with k = 5 (the default value) and we will later come 
+back and check whether different values give better results
+```{r}
+y_pred = knn(train = training_set[, -1],
+             test = test_set[, -1],
+             cl = training_set[, 1],
+             k = 5)
+```
+
+# Evaluating model performance
+It is time to evaluate our model's performance. We'll start with making a simple
+confusion matrix for the test set
+```{r}
+cm = table(test_set[, 1], y_pred)
+cm
+```
+Our model appears very accurate. Let's calculate the Odds Ratio
+```{r}
+OR = (cm[1] * cm[4])/(cm[2] * cm[3])
+OR
+```
+Even though the Odds Ratio is really high we notice that we have more false
+negatives (FN) than false positives (FP) which although in terms for accuracy
+does not make a difference, it can be dangerous in a real life scenario to
+diagnose someone as Benign when in fact they are Malignant.
+
+# Imrpoving model performance
+
+We will first try to improve our result by changing our scaling method. Earlier
+we used z-score standardization, we will now try normalization.
+```{r}
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+dataset[-1] = as.data.frame(lapply(dataset[-1], normalize))
+```
+
+We will now repeat the previous steps and see if that improves our accuracy
+```{r echo=FALSE}
+set.seed(123)
+split = sample.split(dataset$diagnosis, SplitRatio = 0.75)
+training_set2 = subset(dataset, split == TRUE)
+test_set2 = subset(dataset, split == FALSE)
+
+y_pred2 = knn(train = training_set2[, -1],
+             test = test_set2[, -1],
+             cl = training_set2[, 1],
+             k = 5)
+
+cm2 = table(test_set2[, 1], y_pred2)
+cm2
+
+OR2 = (cm2[1] * cm2[4])/(cm2[2] * cm2[3])
+OR2
+```
+We see that our Odds Ratio decreased however, so did our False Negatives and 
+in this particular case, that is more important than a simple accuracy 
+measurement.
+
+We can also, as mentioned earlier, test different values of K and see how that
+affects our model performance
+```{r}
+tmp.res.OR = integer()
+tmp.res.FN = integer()
+tmp.res.FP = integer()
+
+set.seed(123)
+for (i in c(1:25)) {
+  tmp.pred = knn(train = training_set2[, -1],
+             test = test_set2[, -1],
+             cl = training_set2[, 1],
+             k = i)
+  
+  tmp.cm = table(test_set2[, 1], tmp.pred)
+  
+  tmp.OR = (tmp.cm[1] * tmp.cm[4])/(tmp.cm[2] * tmp.cm[3])
+
+  tmp.res.OR[i] = tmp.OR
+  tmp.res.FN[i] = tmp.cm[2]
+  tmp.res.FP[i] = tmp.cm[3]
+}
+
+results = data.frame(tmp.res.OR, tmp.res.FN, tmp.res.FP)
+colnames(results) = c('OR', 'FN', 'FP')
+results = results[order(results$OR, decreasing = T),]
+results
+```
+Examining the results we observe that the the iteration with k = 22 yielded not 
+only the best Odds Ratio but also the least amount of False Negatives. While 
+this does seem like the best iteration on paper, because of our low sample size
+this could be the result of overfitting. The next best result in terms of both 
+OR and FN is held by various values of K from which I'll be picking K = 8 as it 
+is the smallest and therefore less likely to overfit.
+
+# Conclusion
+We see that K-NN alrogorithm can be very accurate in modeling this data set. 
+Although the classifier was never perfect the 8NN approach was able to avoid 
+some of the False Negatives that the default 5NN had and as a result, increase
+the Odds Ratio. It is important to remember however that the size of this
+dataset is fairly limiting and a much larger sample size would be needed to 
+obtain concrete and reliable results
+concrete 
